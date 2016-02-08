@@ -1,0 +1,19 @@
+#!/bin/bash
+
+#
+# GENERATED FILE. DO NOT EDIT
+#
+
+echo "----------- Will build VM for cluster {{m.cluster.id}}"
+{% for node in m.cluster.nodes %}
+sudo ../../../scripts/createVM.sh --host {{node.host}} --hname {{node.hostname}} --vname {{node.vmname}} \
+ 	--memory {{node.features.memory}} --vcpu {{node.features.vcpu}} --osdisk {{node.features.root_size}} --osvolume {{ node.root_volume }} \ 
+	--bridge {{m.network.bridge}} --ip {{node.ip}} --netmask {{m.network.netmask}} --gateway {{m.network.gateway}} &
+	
+{% endfor %}
+
+echo "............ Wait for VM creation"
+wait
+
+
+

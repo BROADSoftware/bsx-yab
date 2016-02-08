@@ -1,0 +1,30 @@
+
+
+If first serious python project:
+sudo pip install --upgrade pip
+pip install virtualenv
+pip install virtualwrapper
+
+
+In my .profile:
+alias y='cd ~/dev/kw2/git/yab; workon yab'
+source /usr/local/bin/virtualenvwrapper.sh
+
+
+Then:
+
+mkvirtualenv yab
+workon yab
+pip install -r requirements.txt
+
+
+WHEN INSTALLING NEW STUFF:
+
+pip freeze > requirements.txt
+
+
+To refresh the environnement (i.e. After useless package installation).
+rm -rf ~/.virtualenvs/yab
+mkvirtualenv yab
+workon yab
+pip install -r requirements.txt
