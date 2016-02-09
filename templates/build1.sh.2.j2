@@ -1,31 +1,3 @@
-#!/bin/bash
-
-#
-# GENERATED FILE. DO NOT EDIT
-#
-
-
-
-function ensure_ip_free
-{
-	echo -c "Will ensure $1 is not already in use.."
-	ping -c 1 -t 2 $1
-	if [ $? -eq 0 ]
-	then
-		echo "IP $1 IS ALIVE. Will not continue!!"
-		exit 1
-	fi
-	echo "OK"
-}
-
-
-echo "----------- Test if IP are free for cluster {{m.cluster.id}}"
-{% for node in m.cluster.nodes %}
-ensure_ip_free {{node.ip}}
-{% endfor %}
-
-
-echo "----------- Will build VM for cluster {{m.cluster.id}}"
 {% for node in m.cluster.nodes %}
 	
 {{m.config.create_vm_script}} --name {{node.vmname}} --vcpu {{node.features.vcpu}} --ram {{node.features.memory}} --host {{node.host}} --disk {{node.features.root_size}} \
@@ -33,9 +5,6 @@ echo "----------- Will build VM for cluster {{m.cluster.id}}"
   --bridge {{node.network.bridge}} --ip {{node.ip}} --netmask {{node.network.netmask}} --gateway {{node.network.gateway}} --mac {{node.mac}} --dns {{node.network.dns}} &
 	
 {% endfor %}
-
-echo "............ Wait for VM creation"
-wait
 
 
 

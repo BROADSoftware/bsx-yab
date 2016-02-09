@@ -1,0 +1,4 @@
+{% for node in m.cluster.nodes %}
+ensure_ip_free {{node.ip}}
+{% endfor %}
+

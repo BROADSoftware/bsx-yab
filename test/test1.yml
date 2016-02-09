@@ -1,6 +1,7 @@
 
 id: hdp1
 domain: hdp1.bsa.broadsoftware.com
+default_network: service
    
 patterns:
 - name: service_nodes

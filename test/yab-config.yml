@@ -1,2 +1,31 @@
 
 
+create_vm_script: "../../scripts/createVM.sh"
+
+keys_location: "../keys"
+
+networks:
+
+  - name: service
+    base: 10.58.0.0
+    netmask: 255.255.240.0
+    gateway: 10.58.0.1
+    bridge: br110
+    dns: 10.58.0.1
+
+  - name: network200
+    base: 10.58.200.0
+    netmask: 255.255.255.0
+    gateway: 10.58.200.1
+    bridge: br200  
+    dns: 10.58.0.1
+
+  - name: network201
+    base: 10.58.201.0
+    netmask: 255.255.255.0
+    gateway: 10.58.201.1
+    bridge: br201
+    dns: 10.58.0.1
+    
+    
+    
