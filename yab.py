@@ -9,6 +9,10 @@ import socket
 import jinja2
 import hashlib
 import ipaddress
+import fileinput
+import re
+import shutil
+
 
 def usage():
     print """Usage: yab.py <sourceFile> <targetFolder> [<configFile>]
@@ -42,7 +46,7 @@ patternMandatoryAttributes = ["name", "root_size", "memory", "vcpu"]
 patternAllowedAttributes = set(patternMandatoryAttributes).union(set(["data_disks"]))
 
 def ERROR(message):
-    print "* * * * ERROR: " + message
+    print "* * * * ERROR: " + str(message)
     exit(1)
 
 def ensureFolder(path):
@@ -160,15 +164,53 @@ def adjustCluster(cluster, config):
             node.root_volume_index = 0
         node.root_volume = "/vol%02d" % node.root_volume_index
             
-        
-        
+startPattern = re.compile(r"^#\s+YAB_([0-9])_BEGIN\s.*$")        
+endPattern = re.compile(r"^#\s+YAB_([0-9])_END\s.*$")        
+
+class SubsError(Exception):
+    def __init__(self, value):
+        self.value = value
+    def __str__(self):
+        return repr(self.value)     
+
+
+
 def generate(jinja2env, model, templateName, targetFolder, outputFileName):
     outputPath = os.path.join(targetFolder, outputFileName) 
-    tmpl = jinja2env.get_template(templateName + ".j2")
-    f = open(outputPath, 'w')
-    x = tmpl.render(m=model)
-    f.write(x)
-    f.close()    
+    # --------------------------------------------------------- Create initial file if not existing
+    if not os.path.isfile(outputPath):
+        tmpl = jinja2env.get_template(templateName + ".0.j2")
+        f = open(outputPath, 'w')
+        x = tmpl.render(m=model)
+        f.write(x)
+        f.close()
+    # -------------------------------------------------------- And now rewrite the file with sub-template injection
+    group = None
+    try:
+        for line in fileinput.FileInput(outputPath, inplace=1, backup=".bak"):
+            if group != None:
+                m = endPattern.match(line) 
+                if m:
+                    if m.group(1) != group:
+                        raise SubsError("YAB_{0}_BEGIN.... YAB_{1}_END tag mismatch!".format(group, m.group(1)))
+                    else:
+                        sys.stdout.write(line)
+                        group = None
+            else:
+                sys.stdout.write(line)
+                m = startPattern.match(line)
+                if m:
+                    group = m.group(1)  
+                    tmpl = jinja2env.get_template(templateName + "." + group + ".j2")
+                    sys.stdout.write(tmpl.render(m=model))
+        if group:
+            raise SubsError("Unenclosed last YAB_{0}_BEGIN tag".format(group))
+    except SubsError as e:
+        # ---------------- Will rollback by moving backup file in place.
+        os.rename(outputPath + ".bak", outputPath)
+        ERROR(e)
+    # And remove the backup file
+    os.remove(outputPath + ".bak")
         
         
         
