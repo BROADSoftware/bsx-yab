@@ -11,7 +11,7 @@ import hashlib
 import ipaddress
 import fileinput
 import re
-import shutil
+import traceback
 
 
 def usage():
@@ -30,7 +30,7 @@ This from <sourceFile>, which is a yaml file describing the infrastructure to bu
         And so on recursivly up to /
 """
 
-configMandatoryAttributes = ["networks", "create_vm_script", "keys_location"]
+configMandatoryAttributes = ["networks", "create_vm_script", "keys_location", "deviceFromIndex", "hosts", "attach_disk_script"]
 configAllowedAttributes = set(configMandatoryAttributes).union(set([]))
 
 networkMandatoryAttributes = ["name", "base", "bridge", "netmask", "gateway", "dns"] 
@@ -40,12 +40,16 @@ clusterMandatoryAttributes = ["id", "domain", "patterns", "nodes", "default_netw
 clusterAllowedAttributes = set(clusterMandatoryAttributes).union(set([]))
  
 nodeMandatoryAttributes = ["name", "pattern", "host"] 
-nodeAllowedAttributes = set(nodeMandatoryAttributes).union(set(["blueprint_host_group", "hostname", "base_volume_index", "ip", "vmname", "network"]))
+nodeAllowedAttributes = set(nodeMandatoryAttributes).union(set(["blueprint_host_group", "hostname", "base_volume_index", "volume_indexes", "root_volume_index", "ip", "vmname", "network"]))
 
 patternMandatoryAttributes = ["name", "root_size", "memory", "vcpu"] 
 patternAllowedAttributes = set(patternMandatoryAttributes).union(set(["data_disks"]))
 
-def ERROR(message):
+def ERROR(err):
+    if type(err) is str:
+        message = err
+    else:
+        message = err.__class__.__name__ + ": " + str(err)
     print "* * * * ERROR: " + str(message)
     exit(1)
 
@@ -121,11 +125,37 @@ def adjustConfig(config):
             ERROR("Gateway '{0}' not in network {1}".format(network.gateway, network))
     config.networkByName = dict((network.name, network) for network in config.networks)
     
+
+def buildVolumeList(config, node):
+    # -------------------------------- Handle root disk
+    if 'root_volume_index' in node:
+        idx = node.root_volume_index
+    else:
+        idx = 0
+    nbrRootVolumes = len(config.hosts[node.host].root_volumes)
+    node.root_volume = config.hosts[node.host].root_volumes[idx % nbrRootVolumes]
+    # ----------------------------- Handle Data disks
+    if "data_disks" in node.features and len(node.features.data_disks) > 0:
+        nbrDataVolume = len(config.hosts[node.host].data_volumes)
+        if "base_volume_index" in node:
+            for i in range(len(node.features.data_disks)):
+                node.features.data_disks[i].volume = config.hosts[node.host].data_volumes[(i + node.base_volume_index) % nbrDataVolume]
+        elif "volume_indexes" in node:
+            if len(node.volume_indexes) != nbrDataVolume:
+                ERROR("Node {0}: volume_indexes size ({1} != host.data_volumes size ({2})".format(node.name, len(node.volume_indexes),nbrDataVolume))
+            for i in range(len(node.features.data_disks)):
+                node.features.data_disks[i].volume = config.hosts[node.host].data_volumes[node.volume_indexes[i]]
+        else:
+            ERROR("Node {0}: Either 'base_volume_index' or 'volume_indexes' must be defined!".format(node.name))
+
         
 def adjustCluster(cluster, config):
     checkAttributes(cluster, clusterMandatoryAttributes, clusterAllowedAttributes)
     for pattern in cluster.patterns:
         checkAttributes(pattern, patternMandatoryAttributes, patternAllowedAttributes)
+        if "data_disks" in pattern:
+            for i in range(0, len(pattern.data_disks)):
+                pattern.data_disks[i].device = config.deviceFromIndex[i]
     if cluster.default_network not in config.networkByName:
         ERROR("Invalid cluster.default_network: '{0}'".format(cluster.default_network))  
     cluster.defaultNetwork = config.networkByName[cluster.default_network]
@@ -160,14 +190,12 @@ def adjustCluster(cluster, config):
             node.network = cluster.defaultNetwork
         if ipaddress.ip_address(node.ip) not in node.network.cidr:
             ERROR("IP '{0}' not in network '{1}' for node {2}".format(node.ip, node.network.name, node))
-        if 'root_volume_index' not in node:
-            node.root_volume_index = 0
-        node.root_volume = "/vol%02d" % node.root_volume_index
+        buildVolumeList(config, node)
             
-startPattern = re.compile(r"^#\s+YAB_([0-9])_BEGIN\s.*$")        
-endPattern = re.compile(r"^#\s+YAB_([0-9])_END\s.*$")        
+startPattern = re.compile(r"^#\s+YAB_INCLUDE\[(.+)\]_BEGIN\s.*$")        
+endPattern = re.compile(r"^#\s+YAB_INCLUDE\[(.+)\]_END\s.*$")        
 
-class SubsError(Exception):
+class TmplInjectionError(Exception):
     def __init__(self, value):
         self.value = value
     def __str__(self):
@@ -179,7 +207,7 @@ def generate(jinja2env, model, templateName, targetFolder, outputFileName):
     outputPath = os.path.join(targetFolder, outputFileName) 
     # --------------------------------------------------------- Create initial file if not existing
     if not os.path.isfile(outputPath):
-        tmpl = jinja2env.get_template(templateName + ".0.j2")
+        tmpl = jinja2env.get_template(templateName + ".j2")
         f = open(outputPath, 'w')
         x = tmpl.render(m=model)
         f.write(x)
@@ -192,7 +220,7 @@ def generate(jinja2env, model, templateName, targetFolder, outputFileName):
                 m = endPattern.match(line) 
                 if m:
                     if m.group(1) != group:
-                        raise SubsError("YAB_{0}_BEGIN.... YAB_{1}_END tag mismatch!".format(group, m.group(1)))
+                        raise TmplInjectionError("YAB_{0}_BEGIN.... YAB_{1}_END tag mismatch!".format(group, m.group(1)))
                     else:
                         sys.stdout.write(line)
                         group = None
@@ -201,16 +229,21 @@ def generate(jinja2env, model, templateName, targetFolder, outputFileName):
                 m = startPattern.match(line)
                 if m:
                     group = m.group(1)  
-                    tmpl = jinja2env.get_template(templateName + "." + group + ".j2")
+                    tmpl = jinja2env.get_template(group + ".j2")
                     sys.stdout.write(tmpl.render(m=model))
         if group:
-            raise SubsError("Unenclosed last YAB_{0}_BEGIN tag".format(group))
-    except SubsError as e:
+            raise TmplInjectionError("Unenclosed last YAB_{0}_BEGIN tag".format(group))
+    except Exception:
         # ---------------- Will rollback by moving backup file in place.
         os.rename(outputPath + ".bak", outputPath)
-        ERROR(e)
+        traceback.print_exc()
+        #ERROR(e)
     # And remove the backup file
-    os.remove(outputPath + ".bak")
+    try:
+        os.remove(outputPath + ".bak")
+    except:
+        pass
+    
         
         
         

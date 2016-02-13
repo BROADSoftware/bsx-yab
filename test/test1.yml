@@ -4,6 +4,11 @@ domain: hdp1.bsa.broadsoftware.com
 default_network: service
    
 patterns:
+- name: name_nodes
+  root_size: 20
+  memory: 8
+  vcpu: 2
+
 - name: service_nodes
   root_size: 40
   memory: 32
@@ -28,6 +33,14 @@ patterns:
 
   
 nodes:
+- name: nn1
+  pattern: name_nodes
+  vmname: vm_hdp1_nn1
+  host: bsa3
+  blueprint_host_group: hg_nn1
+  ip: 10.58.2.1
+
+
 - name: sr1
   pattern: service_nodes
   hostname: xsr1
@@ -35,26 +48,27 @@ nodes:
   host: bsa2
   base_volume_index: 2
   blueprint_host_group: hg_sr1
-  ip: 10.58.2.1
+  ip: 10.58.2.2
+  root_volume_index: 2
 
 - name: dn1
   pattern: data_nodes
   host: bsa2
-  base_volume_index: 1
+  base_volume_index: 0
   blueprint_host_group: hg_dnX
-  ip: 10.58.2.2
+  ip: 10.58.2.3
 
 - name: dn2
   pattern: data_nodes
   host: bsa3
   base_volume_index: 1
   blueprint_host_group: hg_dnX
-  ip: 10.58.2.3
+  ip: 10.58.2.4
 
 - name: dn3
   pattern: data_nodes
   host: bsa4
-  base_volume_index: 1
+  volume_indexes: [ 3, 2, 1, 0 ] 
   blueprint_host_group: hg_dnX
-  ip: 10.58.2.4
+  ip: 10.58.2.5
   
