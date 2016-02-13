@@ -1,0 +1,11 @@
+{% for node in m.cluster.nodes %}
+{% if node.features.data_disks is defined -%}
+echo "---- Will build Data disk(s) for node {{node.name}}"
+{%     for disk in node.features.data_disks -%}
+sudo {{m.config.attach_disk_script}} --host {{node.host}} --name {{node.vmname}} --size {{disk.size}} --volume {{disk.volume}} --device {{disk.device}}
+{%     endfor %}
+{% else -%}
+echo "---- No Data disk for node {{node.name}}"
+{% endif -%}
+{% endfor %}
+

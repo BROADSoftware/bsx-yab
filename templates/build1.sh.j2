@@ -1,11 +1,5 @@
 #!/bin/bash
 
-#
-# GENERATED FILE. DO NOT EDIT
-#
-
-
-
 function ensure_ip_free
 {
 	echo -c "Will ensure $1 is not already in use.."
@@ -18,24 +12,22 @@ function ensure_ip_free
 	echo "OK"
 }
 
-
 echo "----------- Test if IP are free for cluster {{m.cluster.id}}"
-{% for node in m.cluster.nodes %}
-ensure_ip_free {{node.ip}}
-{% endfor %}
+# YAB_INCLUDE[build1-ensureip]_BEGIN - Do not modify from this point >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
+# YAB_INCLUDE[build1-ensureip]_END - You may modify below this <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 echo "----------- Will build VM for cluster {{m.cluster.id}}"
-{% for node in m.cluster.nodes %}
-	
-{{m.config.create_vm_script}} --name {{node.vmname}} --vcpu {{node.features.vcpu}} --ram {{node.features.memory}} --host {{node.host}} --disk {{node.features.root_size}} \
-  --volume {{node.root_volume}} --hostname  {{node.hostname}} --buildkey {{m.config.keys_location}}/build_key --hostkey {{m.config.keys_location}}/host_key \
-  --bridge {{node.network.bridge}} --ip {{node.ip}} --netmask {{node.network.netmask}} --gateway {{node.network.gateway}} --mac {{node.mac}} --dns {{node.network.dns}} &
-	
-{% endfor %}
+# YAB_INCLUDE[build1-createvm]_BEGIN - Do not modify from this point >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+# YAB_INCLUDE[build1-createvm]_END - You may modify below this <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
 
 echo "............ Wait for VM creation"
 wait
 
 
+# YAB_INCLUDE[build1-ddisks]_BEGIN - Do not modify from this point >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+# YAB_INCLUDE[build1-ddisks]_END - You may modify below this <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 

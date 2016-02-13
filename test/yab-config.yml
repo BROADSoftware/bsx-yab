@@ -1,8 +1,10 @@
 
 
 create_vm_script: "../../scripts/createVM.sh"
-
+attach_disk_script: "../../scripts/attachDisk.sh"
 keys_location: "../keys"
+
+
 
 networks:
 
@@ -26,6 +28,38 @@ networks:
     gateway: 10.58.201.1
     bridge: br201
     dns: 10.58.0.1
+    
+deviceFromIndex: [ 'vdb', 'vdc', 'vdd', 'vde', 'vdf', 'vdg', 'vdh', 'vdi', 'vdj', 'vdk', 'vdl', 'vdm', 'vdn', 'vdo', 'vdp', 'vdq', 'vdr', 'vds', 'vdt', 'vdu', 'vdv' ]
+
+
+
+hosts:
+  bsa2:
+    root_volumes:
+    - "/vol00"
+    data_volumes:
+    - "/vol01"
+    - "/vol02"
+    - "/vol03"
+    - "/vol04"
+    
+  bsa3:
+    root_volumes:
+    - "/vol00"
+    data_volumes:
+    - "/vol01"
+    - "/vol02"
+    - "/vol03"
+    - "/vol04"
+    
+  bsa4:
+    root_volumes:
+    - "/vol00"
+    data_volumes:
+    - "/vol01"
+    - "/vol02"
+    - "/vol03"
+    - "/vol04"
     
     
     
