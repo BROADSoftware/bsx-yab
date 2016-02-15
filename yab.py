@@ -30,8 +30,11 @@ This from <sourceFile>, which is a yaml file describing the infrastructure to bu
         And so on recursivly up to /
 """
 
-configMandatoryAttributes = ["networks", "create_vm_script", "keys_location", "deviceFromIndex", "hosts", "attach_disk_script"]
-configAllowedAttributes = set(configMandatoryAttributes).union(set([]))
+infraConfigMandatoryAttributes = ["networks", "deviceFromIndex", "hosts"]
+infraConfigAllowedAttributes = set(infraConfigMandatoryAttributes).union(set([]))
+
+envConfigMandatoryAttributes = ["kvm_script_path", "keys_location", "roles_path"]
+envConfigAllowedAttributes = set(envConfigMandatoryAttributes).union(set([]))
 
 networkMandatoryAttributes = ["name", "base", "bridge", "netmask", "gateway", "dns"] 
 networkAllowedAttributes = set(networkMandatoryAttributes).union(set([]))
@@ -76,15 +79,15 @@ def resolveDns(fqdn):
     except socket.gaierror:
         return None
         
-def findYabConfig(initial, location, cpt):
-    x = os.path.join(location ,'yab-config.yml')
+def findYabConfig(fileName, initial, location, cpt):
+    x = os.path.join(location , fileName)
     if os.path.isfile(x):
         # Found !
         print "Use '{0}' as config file".format(x)
         return edict(yaml.load(open(x)))
     else:
         if location == "" or location == "/" :
-            ERROR("Unable to locate a yab-config.yml file in '{0}' and upward".format(initial))
+            ERROR("Unable to locate a {0} file in '{1}' and upward".format(fileName, initial))
         else:
             if cpt < 20:
                 findYabConfig(initial, os.path.dirname(location), cpt + 1)
@@ -116,8 +119,8 @@ def generateMac(ip):
     m = "52:54:00:{0}:{1}:{2}".format(s[0:2], s[2:4], s[4:6])
     return m
 
-def adjustConfig(config):
-    checkAttributes(config, configMandatoryAttributes, configAllowedAttributes)
+def adjustInfraConfig(config):
+    checkAttributes(config, infraConfigMandatoryAttributes, infraConfigAllowedAttributes)
     for network in config.networks:
         checkAttributes(network, networkMandatoryAttributes, networkAllowedAttributes)
         network.cidr = ipaddress.IPv4Network("" + network.base + "/" + network.netmask, strict=True) 
@@ -125,6 +128,8 @@ def adjustConfig(config):
             ERROR("Gateway '{0}' not in network {1}".format(network.gateway, network))
     config.networkByName = dict((network.name, network) for network in config.networks)
     
+def adjustEnvConfig(config):
+    checkAttributes(config, envConfigMandatoryAttributes, envConfigAllowedAttributes)
 
 def buildVolumeList(config, node):
     # -------------------------------- Handle root disk
@@ -203,6 +208,16 @@ class TmplInjectionError(Exception):
 
 
 
+def regenerate(jinja2env, model, templateName, targetFolder, outputFileName):
+    outputPath = os.path.join(targetFolder, outputFileName) 
+    tmpl = jinja2env.get_template(templateName + ".j2")
+    f = open(outputPath, 'w')
+    x = tmpl.render(m=model)
+    f.write(x)
+    f.close()
+
+
+
 def generate(jinja2env, model, templateName, targetFolder, outputFileName):
     outputPath = os.path.join(targetFolder, outputFileName) 
     # --------------------------------------------------------- Create initial file if not existing
@@ -256,30 +271,46 @@ def main():
     sourceFile = sys.argv[1]
     targetFolder = sys.argv[2]
     sourceFileDir = os.path.dirname(os.path.realpath(sourceFile))
-    config = findYabConfig(sourceFileDir, sourceFileDir, 0)
-    adjustConfig(config)
+    infraConfig = findYabConfig('yab-infra.yml', sourceFileDir, sourceFileDir, 0)
+    adjustInfraConfig(infraConfig)
+    envConfig = findYabConfig('yab-env.yml', sourceFileDir, sourceFileDir, 0)
+    adjustEnvConfig(envConfig)
         
     if not os.path.isfile(sourceFile):
         print "{0} is not a readable file!".format(sourceFile)
         sys.exit(1)
         
     cluster = edict(yaml.load(open(sourceFile)))
-    adjustCluster(cluster, config)
+    adjustCluster(cluster, infraConfig)
     
     targetBuildFolder = os.path.join(targetFolder ,'build') 
+    targetHostVarsFolder = os.path.join(targetBuildFolder ,'host_vars') 
+    targetCmdFolder = os.path.join(targetFolder ,'cmd') 
     ensureFolder(targetFolder)
     ensureFolder(targetBuildFolder)
+    ensureFolder(targetHostVarsFolder)
+    ensureFolder(targetCmdFolder)
 
     pp = pprint.PrettyPrinter(indent=2)
-    pp.pprint(config)
+    pp.pprint(infraConfig)
+    pp.pprint(envConfig)
     pp.pprint(cluster)
 
     model = edict({})
     model.cluster = cluster
-    model.config = config
-    
+    model.infra = infraConfig
+    model.env = envConfig
     jinja2env = jinja2.Environment(loader = jinja2.FileSystemLoader(os.path.join(mydir, 'templates')), undefined = jinja2.StrictUndefined, trim_blocks = True)
-    generate(jinja2env, model, "build1.sh", targetBuildFolder, "build1.sh")
+    generate(jinja2env, model, "build.sh", targetBuildFolder, "build.sh")
+    generate(jinja2env, model, "inventory", targetBuildFolder, "inventory")
+    generate(jinja2env, model, "ansible.cfg", targetBuildFolder, "ansible.cfg")
+    for node in cluster.nodes:
+        model.node = node
+        generate(jinja2env, model, "host_vars", targetHostVarsFolder, node.name)
+    regenerate(jinja2env, model, "startCluster.sh", targetCmdFolder, "startCluster.sh")
+    regenerate(jinja2env, model, "stopCluster.sh", targetCmdFolder, "stopCluster.sh")
+    regenerate(jinja2env, model, "statusCluster.sh", targetCmdFolder, "statusCluster.sh")
+        
 
 if __name__ == "__main__":
     main()

@@ -1,0 +1,16 @@
+#!/bin/bash
+
+#
+# GENERATED FILE. DO NOT EDIT
+#
+
+echo "----------- Will stop cluster {{m.cluster.id}}"
+{% for node in m.cluster.nodes %}
+sudo {{m.env.kvm_script_path}}/stopVM.sh --host {{node.host}} --name {{node.vmname}} &
+{% endfor %}
+
+echo "............ Wait for VM down"
+wait
+
+
+

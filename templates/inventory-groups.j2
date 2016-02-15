@@ -1,0 +1,9 @@
+{% for group, hosts in m.cluster.groups.iteritems() %}
+
+[{{ group}}]
+{%     for host in hosts -%}
+{{ host }}
+{%     endfor %}
+{% endfor %}
+
+

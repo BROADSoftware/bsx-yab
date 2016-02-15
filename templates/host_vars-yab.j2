@@ -1,0 +1,17 @@
+
+cluster_domain: "{{  m.cluster.domain  }}"
+
+cluster_id: "{{ m.cluster.id }}"
+
+{% if m.node.features.data_disks is defined -%}
+disk_additional_disks:
+{% for disk in m.node.features.data_disks -%}
+- disk: /dev/{{disk.device}}
+  fstype: xfs
+  mount_options: "defaults,noatime"
+  fsopts: "-m 0 -O extent,sparse_super,flex_bg"
+  mount: {{ disk.mount }}
+{% endfor %}
+{% endif %}
+
+

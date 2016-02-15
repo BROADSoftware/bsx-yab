@@ -1,0 +1,14 @@
+#!/bin/bash
+
+#
+# GENERATED FILE. DO NOT EDIT
+#
+
+
+echo "----------- Display cluster {{m.cluster.id}} status"
+{% for node in m.cluster.nodes %}
+sudo {{m.env.kvm_script_path}}/statusVM.sh --host {{node.host}} --name {{node.vmname}} 
+{% endfor %}
+
+
+
