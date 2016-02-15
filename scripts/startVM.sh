@@ -9,7 +9,7 @@ SSH_OPTIONS=-t
 MYDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source $MYDIR/functions.sh
 
-source ./setenv.sh
+if [ "$INFRA_DOMAIN" = "" ]; then echo "INFRA_DOMAIN environment variable must be set"; exit 1; fi
 
 function usage {
 	echo 'startVM --host <host> --name <VM_name> --fqdn <VM_fqdn>'

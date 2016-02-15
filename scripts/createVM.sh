@@ -11,7 +11,8 @@ SSH_OPTIONS="-t -t -q"
 MYDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source $MYDIR/functions.sh
 
-source ./setenv.sh
+if [ "$INFRA_DOMAIN" = "" ]; then echo "INFRA_DOMAIN environment variable must be set"; exit 1; fi
+if [ "$COBBLER_HOST" = "" ]; then echo "COBBLER_HOST environment variable must be set"; exit 1; fi
 
 
 function usage {
@@ -107,6 +108,20 @@ if [ "$BUILDKEY" = "" ]; then echo "Missing --buildkey parameters"; usage; exit 
 if [ "$HOSTKEY" = "" ]; then echo "Missing --hostkey parameters"; usage; exit 1; fi
 if [ "$DNS" = "" ]; then echo "Missing --dns parameters"; usage; exit 1; fi
 
+
+DSK=/${VOLUME}/libvirt/images/${NAME}_vda.qcow2
+
+# Ensure we will not overwrite an existing one
+
+set +e
+ensure_ip_free $IP
+
+ssh $SSH_OPTIONS $HOST "ls $DSK" >/dev/null
+if [ $? -eq 0 ]; then echo "DISK ${DSK} ALREADY EXISTING ON ${HOST}!!!. WILL STOP"; exit 1; fi 
+set -e
+
+# Ok, let's go
+
 scp $BUILDKEY.pub $COBBLER_HOST:/tmp/build_key_pub_${NAME}
 ssh $SSH_OPTIONS $COBBLER_HOST "sudo mv /tmp/build_key_pub_${NAME} /var/lib/cobbler/snippets/per_system/build_key_pub/${NAME}"
 
@@ -117,16 +132,15 @@ scp $HOSTKEY.pub $COBBLER_HOST:/tmp/host_key_pub_${NAME}
 ssh $SSH_OPTIONS $COBBLER_HOST "sudo mv /tmp/host_key_pub_${NAME} /var/lib/cobbler/snippets/per_system/host_key_pub/${NAME}"
 
 
-
 # Note than some parameters (ram, vcpu, disk) are for reference information accuracy, as not directly used at this level (We don't use koan)
 ssh $SSH_OPTIONS $COBBLER_HOST "sudo cobbler system add --clobber --name=${NAME} --profile=centos7-kvm --hostname=${VM_HOSTNAME} --static=1 --interface=eth0 --ip-address=${IP} \
     --netmask=${NETMASK} --gateway=${GATEWAY} --mac=${MAC} --virt-ram=${RAM} --virt-cpus=${VCPU} --virt-file-size=${DISK} --virt-bridge=${BRIDGE} --name-servers=${DNS} --name-servers-search=${INFRA_DOMAIN}"
 
-ssh $SSH_OPTIONS $HOST "sudo qemu-img create -f qcow2 -o preallocation=metadata /${VOLUME}/libvirt/images/${NAME}_vda.qcow2 ${DISK}G"
+ssh $SSH_OPTIONS $HOST "sudo qemu-img create -f qcow2 -o preallocation=metadata $DSK ${DISK}G"
 
 ssh $SSH_OPTIONS $HOST "sudo fallocate -l ${DISK}G /${VOLUME}/libvirt/images/${NAME}_vda.qcow2"
 
-ssh $SSH_OPTIONS $HOST "sudo virt-install -n ${NAME} -r ${RAM} --vcpus=${VCPU}  --network bridge=${BRIDGE},model=virtio,mac=${MAC} --disk path=/${VOLUME}/libvirt/images/${NAME}_vda.qcow2 \
+ssh $SSH_OPTIONS $HOST "sudo virt-install -n ${NAME} -r ${RAM} --vcpus=${VCPU}  --network bridge=${BRIDGE},model=virtio,mac=${MAC} --disk path=$DSK \
 		 --pxe --accelerate --vnc --os-type=linux --os-variant=rhel7 --noreboot"
 		 
 echo "Waiting for the VM to shutdown"

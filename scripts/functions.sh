@@ -29,3 +29,15 @@ function wait_ssh_up
 }
 
 
+function ensure_ip_free
+{
+	echo "Will ensure $1 is not already in use.."
+	ping -c 1 -t 2 $1 >/dev/null 2>&1
+	if [ $? -eq 0 ]
+	then
+		echo "IP $1 IS ALIVE. Will not continue!!"
+		exit 1
+	fi
+	echo "OK"
+}
+

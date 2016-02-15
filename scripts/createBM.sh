@@ -11,7 +11,8 @@ SSH_OPTIONS="-t -t -q"
 MYDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source $MYDIR/functions.sh
 
-source ./setenv.sh
+if [ "$INFRA_DOMAIN" = "" ]; then echo "INFRA_DOMAIN environment variable must be set"; exit 1; fi
+if [ "$COBBLER_HOST" = "" ]; then echo "COBBLER_HOST environment variable must be set"; exit 1; fi
 
 
 function usage {
