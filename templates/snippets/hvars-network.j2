@@ -1,0 +1,18 @@
+
+network_config:
+  dns: {{ m.node.network.dns }}
+  search: {{ m.cluster.domain }}
+  hostname: "{{m.node.hostname}}"
+  gateway: "{{m.node.network.gateway}}"
+
+
+if0_config:
+  name: eth0
+  device: eth0
+  bootproto: static
+  address: "{{m.node.ip}}"
+  netmask: "{{m.node.network.netmask}}"
+  broadcast: "{{m.node.network.broadcast}}"
+  routes: []
+
+

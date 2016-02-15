@@ -13,7 +13,7 @@ import re
 import traceback
 import pprint
 
-dumpModel=False
+dumpModel=True
 
 def usage():
     print """Usage: yab.py <sourceFile> <buildOutputFolder> [<cmdOutputFolder>] 
@@ -32,7 +32,7 @@ infraConfigAllowedAttributes = set(infraConfigMandatoryAttributes).union(set([])
 envConfigMandatoryAttributes = ["kvm_script_path", "keys_location", "roles_path"]
 envConfigAllowedAttributes = set(envConfigMandatoryAttributes).union(set([]))
 
-networkMandatoryAttributes = ["name", "base", "bridge", "netmask", "gateway", "dns"] 
+networkMandatoryAttributes = ["name", "base", "bridge", "netmask", "broadcast", "gateway", "dns"] 
 networkAllowedAttributes = set(networkMandatoryAttributes).union(set([]))
 
 clusterMandatoryAttributes = ["id", "domain", "patterns", "nodes", "default_network"]
@@ -90,8 +90,6 @@ def findYabConfig(fileName, initial, location, cpt):
             else:
                 raise Exception("Too many lookup")
             
-
-                
        
 def adjustIP(node, domain):
     fqdn = node.hostname + "." + domain
@@ -294,8 +292,10 @@ def main():
     
     if targetBuildFolder:
         targetHostVarsFolder = os.path.join(targetBuildFolder ,'host_vars') 
+        targetGroupVarsFolder = os.path.join(targetBuildFolder ,'group_vars') 
         ensureFolder(targetBuildFolder)
         ensureFolder(targetHostVarsFolder)
+        ensureFolder(targetGroupVarsFolder)
     if targetCmdFolder:
         ensureFolder(targetCmdFolder)
     if targetSshFolder:
@@ -316,6 +316,7 @@ def main():
         generate(jinja2env, model, "build.sh", targetBuildFolder, "build.sh")
         generate(jinja2env, model, "inventory", targetBuildFolder, "inventory")
         generate(jinja2env, model, "ansible.cfg", targetBuildFolder, "ansible.cfg")
+        generate(jinja2env, model, "group_vars-all", targetGroupVarsFolder, "all")
         for node in cluster.nodes:
             model.node = node
             generate(jinja2env, model, "host_vars", targetHostVarsFolder, node.name)
