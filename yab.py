@@ -3,7 +3,6 @@ import sys
 import os
 import errno
 import yaml
-import pprint
 from easydict import EasyDict as edict
 import socket
 import jinja2
@@ -12,25 +11,22 @@ import ipaddress
 import fileinput
 import re
 import traceback
+import pprint
 
+dumpModel=False
 
 def usage():
-    print """Usage: yab.py <sourceFile> <targetFolder> [<configFile>]
-Will build or patch:
-	<targetFolder>/build/build1.sh		# The script who create the VMs
-	<targetFolder>/build/build2.sh		# The script who create the secondaries disks
+    print """Usage: yab.py <sourceFile> <buildOutputFolder> [<cmdOutputFolder>] 
+
+Will build a set of build files in <buildOutputFolder>
 
 This from <sourceFile>, which is a yaml file describing the infrastructure to build
 
-<configFile> is also a yaml file containing system wide definitions, such as network definition, repositories location, etc...
-    If not provided, it will be looked up as
-        <sourceFileDir>/yab-config.yml
-        <sourceFileDir>/../yab-config.yml
-        <sourceFileDir>/../../yab-config.yml
-        And so on recursivly up to /
+Optionally, add cluster start/stop/... scripts in cmdOutputFolder
+
 """
 
-infraConfigMandatoryAttributes = ["networks", "deviceFromIndex", "hosts"]
+infraConfigMandatoryAttributes = ["networks", "deviceFromIndex", "hosts", "infra_domain", "cobbler_host"]
 infraConfigAllowedAttributes = set(infraConfigMandatoryAttributes).union(set([]))
 
 envConfigMandatoryAttributes = ["kvm_script_path", "keys_location", "roles_path"]
@@ -90,7 +86,7 @@ def findYabConfig(fileName, initial, location, cpt):
             ERROR("Unable to locate a {0} file in '{1}' and upward".format(fileName, initial))
         else:
             if cpt < 20:
-                findYabConfig(initial, os.path.dirname(location), cpt + 1)
+                return findYabConfig(fileName, initial, os.path.dirname(location), cpt + 1)
             else:
                 raise Exception("Too many lookup")
             
@@ -210,6 +206,7 @@ class TmplInjectionError(Exception):
 
 def regenerate(jinja2env, model, templateName, targetFolder, outputFileName):
     outputPath = os.path.join(targetFolder, outputFileName) 
+    print("Generate a brand-new {0}".format(outputPath))
     tmpl = jinja2env.get_template(templateName + ".j2")
     f = open(outputPath, 'w')
     x = tmpl.render(m=model)
@@ -222,11 +219,15 @@ def generate(jinja2env, model, templateName, targetFolder, outputFileName):
     outputPath = os.path.join(targetFolder, outputFileName) 
     # --------------------------------------------------------- Create initial file if not existing
     if not os.path.isfile(outputPath):
+        print("Generate a brand-new {0}".format(outputPath))
         tmpl = jinja2env.get_template(templateName + ".j2")
         f = open(outputPath, 'w')
         x = tmpl.render(m=model)
         f.write(x)
         f.close()
+    else:
+        print("Adjust {0}".format(outputPath))
+        
     # -------------------------------------------------------- And now rewrite the file with sub-template injection
     group = None
     try:
@@ -260,56 +261,73 @@ def generate(jinja2env, model, templateName, targetFolder, outputFileName):
         pass
     
         
-        
+import argparse        
         
 def main():
-    if len(sys.argv) < 3 or len(sys.argv) > 4:
-        usage()
-        sys.exit(1)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--src', required=True)
+    parser.add_argument('--build')
+    parser.add_argument('--cmd')
+    parser.add_argument('--ssh')
+    param = parser.parse_args()
+
+    #print(param)    
     
     mydir =  os.path.dirname(os.path.realpath(__file__)) 
-    sourceFile = sys.argv[1]
-    targetFolder = sys.argv[2]
+    sourceFile = param.src
+    targetBuildFolder = param.build
+    targetCmdFolder= param.cmd
+    targetSshFolder= param.ssh
+
+    if not os.path.isfile(sourceFile):
+        print "{0} is not a readable file!".format(sourceFile)
+        sys.exit(1)
+        
     sourceFileDir = os.path.dirname(os.path.realpath(sourceFile))
     infraConfig = findYabConfig('yab-infra.yml', sourceFileDir, sourceFileDir, 0)
     adjustInfraConfig(infraConfig)
     envConfig = findYabConfig('yab-env.yml', sourceFileDir, sourceFileDir, 0)
     adjustEnvConfig(envConfig)
         
-    if not os.path.isfile(sourceFile):
-        print "{0} is not a readable file!".format(sourceFile)
-        sys.exit(1)
-        
     cluster = edict(yaml.load(open(sourceFile)))
     adjustCluster(cluster, infraConfig)
     
-    targetBuildFolder = os.path.join(targetFolder ,'build') 
-    targetHostVarsFolder = os.path.join(targetBuildFolder ,'host_vars') 
-    targetCmdFolder = os.path.join(targetFolder ,'cmd') 
-    ensureFolder(targetFolder)
-    ensureFolder(targetBuildFolder)
-    ensureFolder(targetHostVarsFolder)
-    ensureFolder(targetCmdFolder)
+    if targetBuildFolder:
+        targetHostVarsFolder = os.path.join(targetBuildFolder ,'host_vars') 
+        ensureFolder(targetBuildFolder)
+        ensureFolder(targetHostVarsFolder)
+    if targetCmdFolder:
+        ensureFolder(targetCmdFolder)
+    if targetSshFolder:
+        ensureFolder(targetSshFolder)
 
-    pp = pprint.PrettyPrinter(indent=2)
-    pp.pprint(infraConfig)
-    pp.pprint(envConfig)
-    pp.pprint(cluster)
+    if dumpModel:
+        pp = pprint.PrettyPrinter(indent=2)
+        pp.pprint(infraConfig)
+        pp.pprint(envConfig)
+        pp.pprint(cluster)
 
     model = edict({})
     model.cluster = cluster
     model.infra = infraConfig
     model.env = envConfig
     jinja2env = jinja2.Environment(loader = jinja2.FileSystemLoader(os.path.join(mydir, 'templates')), undefined = jinja2.StrictUndefined, trim_blocks = True)
-    generate(jinja2env, model, "build.sh", targetBuildFolder, "build.sh")
-    generate(jinja2env, model, "inventory", targetBuildFolder, "inventory")
-    generate(jinja2env, model, "ansible.cfg", targetBuildFolder, "ansible.cfg")
-    for node in cluster.nodes:
-        model.node = node
-        generate(jinja2env, model, "host_vars", targetHostVarsFolder, node.name)
-    regenerate(jinja2env, model, "startCluster.sh", targetCmdFolder, "startCluster.sh")
-    regenerate(jinja2env, model, "stopCluster.sh", targetCmdFolder, "stopCluster.sh")
-    regenerate(jinja2env, model, "statusCluster.sh", targetCmdFolder, "statusCluster.sh")
+    if targetBuildFolder:
+        generate(jinja2env, model, "build.sh", targetBuildFolder, "build.sh")
+        generate(jinja2env, model, "inventory", targetBuildFolder, "inventory")
+        generate(jinja2env, model, "ansible.cfg", targetBuildFolder, "ansible.cfg")
+        for node in cluster.nodes:
+            model.node = node
+            generate(jinja2env, model, "host_vars", targetHostVarsFolder, node.name)
+    if targetCmdFolder:
+        regenerate(jinja2env, model, "startCluster.sh", targetCmdFolder, "startCluster.sh")
+        regenerate(jinja2env, model, "stopCluster.sh", targetCmdFolder, "stopCluster.sh")
+        regenerate(jinja2env, model, "statusCluster.sh", targetCmdFolder, "statusCluster.sh")
+        regenerate(jinja2env, model, "deleteCluster.sh", targetCmdFolder, "deleteCluster.sh")
+    if targetSshFolder:
+        for node in cluster.nodes:
+            model.node = node
+            regenerate(jinja2env, model, "ssh", targetSshFolder, node.name)
         
 
 if __name__ == "__main__":

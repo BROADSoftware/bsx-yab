@@ -6,7 +6,6 @@ set +e
 SSH_OPTIONS="-t -t -q"
 
 MYDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-source $MYDIR/functions.sh
 
 if [ "$INFRA_DOMAIN" = "" ]; then echo "INFRA_DOMAIN environment variable must be set"; exit 1; fi
 
@@ -37,10 +36,10 @@ done
 if [ "$NAME" = "" ]; then echo "Missing --name parameters"; usage; exit 1; fi
 if [ "$HOST" = "" ]; then echo "Missing --host parameters";	usage; exit 1; fi
 
-echo "Stopping the VM ${NAME}"
+echo "Deleting the VM ${NAME}"
 
-ssh $SSH_OPTIONS $HOST "sudo virsh shutdown ${NAME}"
-wait_shutdown $HOST $NAME $NAME				 
+# ssh $SSH_OPTIONS $HOST "sudo virsh destroy ${NAME}"
+ssh $SSH_OPTIONS $HOST "sudo virsh undefine ${NAME}"
 
 
 

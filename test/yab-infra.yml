@@ -1,5 +1,12 @@
 
 
+
+deviceFromIndex: [ 'vdb', 'vdc', 'vdd', 'vde', 'vdf', 'vdg', 'vdh', 'vdi', 'vdj', 'vdk', 'vdl', 'vdm', 'vdn', 'vdo', 'vdp', 'vdq', 'vdr', 'vds', 'vdt', 'vdu', 'vdv' ]
+
+infra_domain: bsa.broadsoftware.com
+
+cobbler_host: "gate1.bsa.broadsoftware.com"
+
 networks:
 
   - name: service
@@ -23,7 +30,6 @@ networks:
     bridge: br201
     dns: 10.58.0.1
     
-deviceFromIndex: [ 'vdb', 'vdc', 'vdd', 'vde', 'vdf', 'vdg', 'vdh', 'vdi', 'vdj', 'vdk', 'vdl', 'vdm', 'vdn', 'vdo', 'vdp', 'vdq', 'vdr', 'vds', 'vdt', 'vdu', 'vdv' ]
 
 hosts:
   bsa2:

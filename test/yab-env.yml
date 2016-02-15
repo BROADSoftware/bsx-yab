@@ -1,6 +1,6 @@
 
 
-kvm_script_path: "../../scripts/createVM.sh"
+kvm_script_path: "../../scripts/"
 keys_location: "../keys"
 roles_path: "../../roles"
 

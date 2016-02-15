@@ -1,33 +1,34 @@
 #!/bin/bash
 
-function ensure_ip_free
-{
-	echo -c "Will ensure $1 is not already in use.."
-	ping -c 1 -t 2 $1
-	if [ $? -eq 0 ]
-	then
-		echo "IP $1 IS ALIVE. Will not continue!!"
-		exit 1
-	fi
-	echo "OK"
-}
-
 echo "----------- Test if IP are free for cluster {{m.cluster.id}}"
-# YAB_INCLUDE[build-ensureip]_BEGIN - Do not modify from this point >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+set +e
+# YAB_INCLUDE[snippets/build-ensureip]_BEGIN - Do not modify from this point >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+# YAB_INCLUDE[snippets/build-ensureip]_END - You may modify below this <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
-# YAB_INCLUDE[build-ensureip]_END - You may modify below this <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+set -e
+
+# YAB_INCLUDE[snippets/build-env]_BEGIN - Do not modify from this point >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+# YAB_INCLUDE[snippets/build-env]_END - You may modify below this <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
 
 echo "----------- Will build VM for cluster {{m.cluster.id}}"
-# YAB_INCLUDE[build-createvm]_BEGIN - Do not modify from this point >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-
-# YAB_INCLUDE[build-createvm]_END - You may modify below this <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-
+# YAB_INCLUDE[snippets/build-createvm]_BEGIN - Do not modify from this point >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+# YAB_INCLUDE[snippets/build-createvm]_END - You may modify below this <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 echo "............ Wait for VM creation"
 wait
 
 
-# YAB_INCLUDE[build-ddisks]_BEGIN - Do not modify from this point >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
-# YAB_INCLUDE[build-ddisks]_END - You may modify below this <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+echo "----------- Will build data disks for cluster hdp1"
+# YAB_INCLUDE[snippets/build-ddisks]_BEGIN - Do not modify from this point >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+# YAB_INCLUDE[snippets/build-ddisks]_END - You may modify below this <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
+
+
+echo "----------- Will start cluster {{m.cluster.id}}"
+# YAB_INCLUDE[snippets/build-startvms]_BEGIN - Do not modify from this point >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+# YAB_INCLUDE[snippets/build-startvms]_END - You may modify below this <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+echo "............ Wait for VM up and ssh ready"
+wait

@@ -3,9 +3,7 @@
 set -e
 
 
-SSH_OPTIONS=-t
-
-MYDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+SSH_OPTIONS="-t -t -q"
 
 if [ "$INFRA_DOMAIN" = "" ]; then echo "INFRA_DOMAIN environment variable must be set"; exit 1; fi
 
@@ -53,15 +51,16 @@ if [ "$DEVICE" = "" ]; then echo "Missing --device parameters";	exit 1; fi
 
 DISK_IMG=${VOLUME}/libvirt/images/${NAME}_${DEVICE}.qcow2
 
+set +e
 ssh $SSH_OPTIONS $HOST "ls $DISK_IMG" >/dev/null
 if [ $? -eq 0 ]; then echo "DISK ${DISK_IMG} ALREADY EXISTING ON ${HOST}!!!. WILL STOP"; exit 1; fi 
+set -e
 
-set -x
-ssh $SSH_OPTIONS $HOST "qemu-img create -f qcow2 -o preallocation=metadata ${DISK_IMG} ${SIZE}G"
+ssh $SSH_OPTIONS $HOST "sudo qemu-img create -f qcow2 -o preallocation=metadata ${DISK_IMG} ${SIZE}G"
 
-ssh $SSH_OPTIONS $HOST "fallocate -l ${SIZE}G ${DISK_IMG}"
+ssh $SSH_OPTIONS $HOST "sudo fallocate -l ${SIZE}G ${DISK_IMG}"
 
-ssh $SSH_OPTIONS $HOST "virsh attach-disk --domain ${NAME} --source ${DISK_IMG} --target ${DEVICE} --persistent --driver qemu --subdriver qcow2 --type disk --sourcetype file"
+ssh $SSH_OPTIONS $HOST "sudo virsh attach-disk --domain ${NAME} --source ${DISK_IMG} --target ${DEVICE} --persistent --driver qemu --subdriver qcow2 --type disk --sourcetype file"
 
 
 

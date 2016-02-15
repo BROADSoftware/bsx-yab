@@ -1,0 +1,3 @@
+{% for node in m.cluster.nodes %}
+{{m.env.kvm_script_path}}/startVM.sh --host {{node.host}} --name {{node.vmname}} --fqdn {{node.ip}} &
+{% endfor %}

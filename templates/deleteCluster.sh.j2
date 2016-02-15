@@ -1,0 +1,43 @@
+#!/bin/bash
+
+#
+# GENERATED FILE. DO NOT EDIT
+#
+
+export INFRA_DOMAIN={{m.infra.infra_domain}}
+
+
+if [ "$1" == "{{m.cluster.id}}" ]
+then
+    echo
+    echo -n "----------- Will delete cluster {{m.cluster.id}}. Are you sure (yes/no): "
+    read a
+    if [ "$a" == "yes" ]
+    then
+        echo "Lets go.."
+        
+{% for node in m.cluster.nodes %}
+        {{m.env.kvm_script_path}}/deleteVM.sh --host {{node.host}} --name {{node.vmname}}
+{% endfor %}
+ 
+{% for node in m.cluster.nodes %}
+        echo "---- Will delete root disk of node {{node.name}}"
+        {{m.env.kvm_script_path}}/deleteDisk.sh --host {{node.host}} --name {{node.vmname}} --volume {{node.root_volume}} --device vda
+{% endfor %}
+
+{% for node in m.cluster.nodes %}
+{% if node.features.data_disks is defined %}
+        echo "---- Will delete Data disk(s) of node {{node.name}}"
+{% for disk in node.features.data_disks %}
+        {{m.env.kvm_script_path}}/deleteDisk.sh --host {{node.host}} --name {{node.vmname}} --volume {{disk.volume}} --device {{disk.device}}
+{% endfor %}
+{% else %}
+        echo "---- No Data disk for node {{node.name}}"
+{% endif %}
+{% endfor %}
+    fi
+else
+    echo 
+    echo "To really delete the cluster, as a security, please provide cluster_id as parameter"
+fi
+

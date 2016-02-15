@@ -3,7 +3,7 @@
 set -e
 
 
-SSH_OPTIONS=-t
+SSH_OPTIONS="-t -t -q"
 
 MYDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source $MYDIR/functions.sh

@@ -4,7 +4,7 @@ set +e
 set +x
 
 
-SSH_OPTIONS=-t
+SSH_OPTIONS="-t -t -q"
 
 MYDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source $MYDIR/functions.sh
@@ -45,7 +45,7 @@ if [ "$FQDN" = "" ]; then echo "Missing --fqdn parameters";	usage; exit 1; fi
 
 echo "Starting the VM ${NAME}"
 
-ssh $SSH_OPTIONS $HOST "sudo virsh start ${NAME}" 2>/dev/null
+ssh $SSH_OPTIONS $HOST "sudo virsh start ${NAME}" 
 		 
 echo "Waiting for the VM ${NAME} to be ssh ready"
 wait_ssh_up $FQDN

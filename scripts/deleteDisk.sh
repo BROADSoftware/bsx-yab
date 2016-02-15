@@ -1,17 +1,14 @@
 #!/bin/bash
 
-set +e
+set -e
 
 
 SSH_OPTIONS="-t -t -q"
 
-MYDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-source $MYDIR/functions.sh
-
 if [ "$INFRA_DOMAIN" = "" ]; then echo "INFRA_DOMAIN environment variable must be set"; exit 1; fi
 
 function usage {
-	echo 'stopVM --host <host> --name <VM_name>'
+	echo 'deleteDisk --host <host> --name <VM_name>  --volume <Volume(vol0-4)> --device <vd[a-x])'
 }
 
 while [[ $# > 0 ]]
@@ -25,6 +22,14 @@ do
 			HOST="$2.${INFRA_DOMAIN}"
 			shift
 		;;
+		--volume)
+			VOLUME=$2
+			shift
+		;;
+		--device)
+			DEVICE=$2
+			shift
+		;;
 		*)
 			echo "Unknown parameter $1"
 			usage
@@ -36,11 +41,13 @@ done
 
 if [ "$NAME" = "" ]; then echo "Missing --name parameters"; usage; exit 1; fi
 if [ "$HOST" = "" ]; then echo "Missing --host parameters";	usage; exit 1; fi
+if [ "$VOLUME" = "" ]; then echo "Missing --volume parameters";	exit 1; fi
+if [ "$DEVICE" = "" ]; then echo "Missing --device parameters";	exit 1; fi
 
-echo "Stopping the VM ${NAME}"
+DISK_IMG=${VOLUME}/libvirt/images/${NAME}_${DEVICE}.qcow2
 
-ssh $SSH_OPTIONS $HOST "sudo virsh shutdown ${NAME}"
-wait_shutdown $HOST $NAME $NAME				 
+ssh $SSH_OPTIONS $HOST "sudo rm ${DISK_IMG}"
+
 
 
 

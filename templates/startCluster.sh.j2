@@ -4,10 +4,11 @@
 # GENERATED FILE. DO NOT EDIT
 #
 
+export INFRA_DOMAIN={{m.infra.infra_domain}}
 
 echo "----------- Will start cluster {{m.cluster.id}}"
 {% for node in m.cluster.nodes %}
-sudo {{m.env.kvm_script_path}}/startVM.sh --host {{node.host}} --name {{node.vmname}} --fqdn {{node.hostname}}.{{ m.cluster.domain}} &
+{{m.env.kvm_script_path}}/startVM.sh --host {{node.host}} --name {{node.vmname}} --fqdn {{node.ip}} &
 {% endfor %}
 
 echo "............ Wait for VM up and ssh ready"
