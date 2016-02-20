@@ -43,7 +43,7 @@ nodes:
 
 - name: sr1
   pattern: service_nodes
-  hostname: xsr1
+  hostname: sr1
   vmname: vm_hdp1_sr1
   host: bsa2
   base_volume_index: 2

@@ -1,0 +1,6 @@
+
+{% for node in m.cluster.nodes %}
+  - { ip: {{ node.ip }}  , fqdn:     {{ node.hostname + "." + m.cluster.domain }} }
+{% endfor %}
+
+

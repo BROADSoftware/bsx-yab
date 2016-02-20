@@ -1,5 +1,6 @@
 
 
+nonos_repositories_url: "http://gate1.bsa.broadsoftware.com/repos/"
 
 deviceFromIndex: [ 'vdb', 'vdc', 'vdd', 'vde', 'vdf', 'vdg', 'vdh', 'vdi', 'vdj', 'vdk', 'vdl', 'vdm', 'vdn', 'vdo', 'vdp', 'vdq', 'vdr', 'vds', 'vdt', 'vdu', 'vdv' ]
 
@@ -12,6 +13,7 @@ networks:
   - name: service
     base: 10.58.0.0
     netmask: 255.255.240.0
+    broadcast: 10.58.15.255
     gateway: 10.58.0.1
     bridge: br110
     dns: 10.58.0.1
@@ -19,6 +21,7 @@ networks:
   - name: network200
     base: 10.58.200.0
     netmask: 255.255.255.0
+    broadcast: 10.58.200.255
     gateway: 10.58.200.1
     bridge: br200  
     dns: 10.58.0.1
@@ -26,6 +29,7 @@ networks:
   - name: network201
     base: 10.58.201.0
     netmask: 255.255.255.0
+    broadcast: 10.58.201.255
     gateway: 10.58.201.1
     bridge: br201
     dns: 10.58.0.1

@@ -12,6 +12,7 @@ import fileinput
 import re
 import traceback
 import pprint
+import argparse        
 
 dumpModel=True
 
@@ -190,9 +191,6 @@ def adjustCluster(cluster, config):
         if ipaddress.ip_address(node.ip) not in node.network.cidr:
             ERROR("IP '{0}' not in network '{1}' for node {2}".format(node.ip, node.network.name, node))
         buildVolumeList(config, node)
-            
-startPattern = re.compile(r"^#\s+YAB_INCLUDE\[(.+)\]_BEGIN\s.*$")        
-endPattern = re.compile(r"^#\s+YAB_INCLUDE\[(.+)\]_END\s.*$")        
 
 class TmplInjectionError(Exception):
     def __init__(self, value):
@@ -212,6 +210,9 @@ def regenerate(jinja2env, model, templateName, targetFolder, outputFileName):
     f.close()
 
 
+            
+startPattern = re.compile(r"^#\s+YAB_INCLUDE\[(.+)\]_BEGIN\s.*$")        
+endPattern = re.compile(r"^#\s+YAB_INCLUDE\[(.+)\]_END\s.*$")        
 
 def generate(jinja2env, model, templateName, targetFolder, outputFileName):
     outputPath = os.path.join(targetFolder, outputFileName) 
@@ -225,7 +226,6 @@ def generate(jinja2env, model, templateName, targetFolder, outputFileName):
         f.close()
     else:
         print("Adjust {0}".format(outputPath))
-        
     # -------------------------------------------------------- And now rewrite the file with sub-template injection
     group = None
     try:
@@ -258,8 +258,56 @@ def generate(jinja2env, model, templateName, targetFolder, outputFileName):
     except:
         pass
     
+def insertZone(jinja2env, model, templateName, outputPath, commentSpec="#"):
+    zoneStart = "{0} YAB ZONE START {1} {2}"
+    zoneEnd = "{0} YAB ZONE END {1} {2}"
+    zoneStartPattern = re.compile(r"^" + zoneStart.format(commentSpec, r"-+", model.cluster.id))
+    zoneEndPattern = re.compile(r"^" + zoneEnd.format(commentSpec, r"-+", model.cluster.id))
+                                  
+    inZone = False
+    zoneDefined = False
+    try:
+        for line in fileinput.FileInput(outputPath, inplace=1, backup=".bak"):
+            if inZone:
+                m = zoneEndPattern.match(line) 
+                if m:
+                    sys.stdout.write(line)
+                    inZone = False
+                else:
+                    pass
+            else:
+                sys.stdout.write(line)
+                m = zoneStartPattern.match(line)
+                if m:
+                    inZone = True
+                    tmpl = jinja2env.get_template(templateName + ".j2")
+                    sys.stdout.write(tmpl.render(m=model))
+                    zoneDefined = True
+        if inZone:
+            raise TmplInjectionError("Unenclosed zone for {0}".format(model.cluster.id))
+        if not zoneDefined:
+            # Will append zone at the end 
+            tmpl = jinja2env.get_template(templateName + ".j2")
+            f = open(outputPath, 'a')
+            f.write("\n" + zoneStart.format(commentSpec, "-----------------------------------", model.cluster.id) + "\n")
+            x = tmpl.render(m=model)
+            f.write(x)
+            f.write(zoneEnd.format(commentSpec, "-----------------------------------", model.cluster.id) + "\n")
+            f.close()
+
         
-import argparse        
+    except Exception:
+        # ---------------- Will rollback by moving backup file in place.
+        os.rename(outputPath + ".bak", outputPath)
+        traceback.print_exc()
+        #ERROR(e)
+    # And remove the backup file
+    try:
+        os.remove(outputPath + ".bak")
+    except:
+        pass
+    
+        
         
 def main():
     parser = argparse.ArgumentParser()
@@ -267,6 +315,7 @@ def main():
     parser.add_argument('--build')
     parser.add_argument('--cmd')
     parser.add_argument('--ssh')
+    parser.add_argument('--dnsmasq')
     param = parser.parse_args()
 
     #print(param)    
@@ -276,10 +325,13 @@ def main():
     targetBuildFolder = param.build
     targetCmdFolder= param.cmd
     targetSshFolder= param.ssh
+    targetDnsmasqFile = param.dnsmasq
 
     if not os.path.isfile(sourceFile):
-        print "{0} is not a readable file!".format(sourceFile)
-        sys.exit(1)
+        ERROR("'{0}' is not a readable file!".format(sourceFile))
+        
+    if targetDnsmasqFile and not os.path.isfile(targetDnsmasqFile):
+        ERROR("dnsmasq: '{0}' does not exists!".format(targetDnsmasqFile))
         
     sourceFileDir = os.path.dirname(os.path.realpath(sourceFile))
     infraConfig = findYabConfig('yab-infra.yml', sourceFileDir, sourceFileDir, 0)
@@ -329,6 +381,9 @@ def main():
         for node in cluster.nodes:
             model.node = node
             regenerate(jinja2env, model, "ssh", targetSshFolder, node.name)
+    if targetDnsmasqFile:
+        insertZone(jinja2env, model, "dnsmasq", targetDnsmasqFile, "#")
+
         
 
 if __name__ == "__main__":
