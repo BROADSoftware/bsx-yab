@@ -36,4 +36,4 @@ EOF
 fi
 	
 
-python yab.py --src test/test1.yml --build test/out1/build --cmd test/out1/cmd --ssh test/out1/ssh --dnsmasq test/out1/dnsmasq
+python yab.py --src test/test1.yml --build test/out1/build --cmd test/out1/cmd --ssh test/out1/ssh --dnsmasq test/out1/dnsmasq 

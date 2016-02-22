@@ -14,8 +14,6 @@ import traceback
 import pprint
 import argparse        
 
-dumpModel=True
-
 def usage():
     print """Usage: yab.py <sourceFile> <buildOutputFolder> [<cmdOutputFolder>] 
 
@@ -316,6 +314,7 @@ def main():
     parser.add_argument('--cmd')
     parser.add_argument('--ssh')
     parser.add_argument('--dnsmasq')
+    parser.add_argument('--dumpmodel', action='store_true')
     param = parser.parse_args()
 
     #print(param)    
@@ -326,6 +325,7 @@ def main():
     targetCmdFolder= param.cmd
     targetSshFolder= param.ssh
     targetDnsmasqFile = param.dnsmasq
+    dumpModel = param.dumpmodel
 
     if not os.path.isfile(sourceFile):
         ERROR("'{0}' is not a readable file!".format(sourceFile))
