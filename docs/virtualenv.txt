@@ -7,11 +7,13 @@ pip install virtualwrapper
 
 
 In my .profile:
-alias y='cd ~/dev/kw2/git/yab; workon yab'
-source /usr/local/bin/virtualenvwrapper.sh
+alias y='cd ~/dev/kw2/git/yab; source /usr/local/bin/virtualenvwrapper.sh; workon yab'
 
 
 Then:
+
+source /usr/local/bin/virtualenvwrapper.sh
+
 
 mkvirtualenv yab
 workon yab
