@@ -40,12 +40,12 @@ Optionally, add cluster start/stop/... scripts in cmdOutputFolder
 """
 
 infraConfigMandatoryAttributes = ["networks", "deviceFromIndex", "hosts", "infra_domain", "cobbler_host", "nonos_repositories_url"]
-infraConfigAllowedAttributes = set(infraConfigMandatoryAttributes).union(set([]))
+infraConfigAllowedAttributes = set(infraConfigMandatoryAttributes).union(set(['cluster_from_name_regex', 'role_from_name_regex']))
 
 envConfigMandatoryAttributes = ["kvm_script_path", "keys_location", "roles_path"]
 envConfigAllowedAttributes = set(envConfigMandatoryAttributes).union(set([]))
 
-networkMandatoryAttributes = ["name", "base", "bridge", "netmask", "broadcast", "gateway", "dns"] 
+networkMandatoryAttributes = ["base", "bridge", "netmask", "broadcast", "gateway", "dns"] 
 networkAllowedAttributes = set(networkMandatoryAttributes).union(set([]))
 
 clusterMandatoryAttributes = ["id", "domain", "patterns", "nodes", "default_network"]
@@ -63,6 +63,7 @@ def ERROR(err):
     else:
         message = err.__class__.__name__ + ": " + str(err)
     print "* * * * ERROR: " + str(message)
+    #raise Exception("xx")
     exit(1)
 
 def ensureFolder(path):
@@ -128,12 +129,11 @@ def generateMac(ip):
 
 def adjustInfraConfig(config):
     checkAttributes(config, infraConfigMandatoryAttributes, infraConfigAllowedAttributes)
-    for network in config.networks:
+    for network in config.networks.itervalues():
         checkAttributes(network, networkMandatoryAttributes, networkAllowedAttributes)
         network.cidr = ipaddress.IPv4Network("" + network.base + "/" + network.netmask, strict=True) 
         if ipaddress.ip_address(network.gateway) not in network.cidr:
             ERROR("Gateway '{0}' not in network {1}".format(network.gateway, network))
-    config.networkByName = dict((network.name, network) for network in config.networks)
     
 def adjustEnvConfig(config):
     checkAttributes(config, envConfigMandatoryAttributes, envConfigAllowedAttributes)
@@ -145,18 +145,18 @@ def buildVolumeList(config, node):
     else:
         idx = 0
     nbrRootVolumes = len(config.hosts[node.host].root_volumes)
-    node.root_volume = config.hosts[node.host].root_volumes[idx % nbrRootVolumes]
+    node.root_volume = config.hosts[node.host].root_volumes[idx % nbrRootVolumes].path
     # ----------------------------- Handle Data disks
     if "data_disks" in node.features and len(node.features.data_disks) > 0:
         nbrDataVolume = len(config.hosts[node.host].data_volumes)
         if "base_volume_index" in node:
             for i in range(len(node.features.data_disks)):
-                node.features.data_disks[i].volume = config.hosts[node.host].data_volumes[(i + node.base_volume_index) % nbrDataVolume]
+                node.features.data_disks[i].volume = config.hosts[node.host].data_volumes[(i + node.base_volume_index) % nbrDataVolume].path
         elif "volume_indexes" in node:
             if len(node.volume_indexes) != nbrDataVolume:
                 ERROR("Node {0}: volume_indexes size ({1} != host.data_volumes size ({2})".format(node.name, len(node.volume_indexes),nbrDataVolume))
             for i in range(len(node.features.data_disks)):
-                node.features.data_disks[i].volume = config.hosts[node.host].data_volumes[node.volume_indexes[i]]
+                node.features.data_disks[i].volume = config.hosts[node.host].data_volumes[node.volume_indexes[i]].path
         else:
             ERROR("Node {0}: Either 'base_volume_index' or 'volume_indexes' must be defined!".format(node.name))
 
@@ -168,9 +168,9 @@ def adjustCluster(cluster, config):
         if "data_disks" in pattern:
             for i in range(0, len(pattern.data_disks)):
                 pattern.data_disks[i].device = config.deviceFromIndex[i]
-    if cluster.default_network not in config.networkByName:
+    if cluster.default_network not in config.networks:
         ERROR("Invalid cluster.default_network: '{0}'".format(cluster.default_network))  
-    cluster.defaultNetwork = config.networkByName[cluster.default_network]
+    cluster.defaultNetwork = config.networks[cluster.default_network]
     cluster.groups = dict((pattern.name, []) for pattern in cluster.patterns)
     patternByName = dict((pattern.name, pattern) for pattern in cluster.patterns)
     nodeByIp = edict({})
@@ -193,10 +193,10 @@ def adjustCluster(cluster, config):
         if 'mac' not in node:
             node.mac = generateMac(node.ip)
         if 'network' in node:
-            if node.network not in config.networkByName:
+            if node.network not in config.networks:
                 ERROR("Invalid network '{0}' in node {1}".format(node.network, node))
             else:
-                node.network = config.networkByName[node.network]
+                node.network = config.networks[node.network]
             pass
         else:
             node.network = cluster.defaultNetwork
