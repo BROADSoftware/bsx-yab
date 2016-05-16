@@ -1,4 +1,6 @@
 cluster_domain: "{{  m.cluster.domain  }}"
 cluster_id: "{{ m.cluster.id }}"
 nonos_repositories_url: "{{m.infra.nonos_repositories_url}}"
-
+{% if m.infra.jenkins_url is defined %}
+jenkins_url: "{{m.infra.jenkins_url}}"
+{% endif %}

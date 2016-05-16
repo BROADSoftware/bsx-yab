@@ -40,7 +40,7 @@ Optionally, add cluster start/stop/... scripts in cmdOutputFolder
 """
 
 infraConfigMandatoryAttributes = ["networks", "deviceFromIndex", "hosts", "infra_domain", "cobbler_host", "nonos_repositories_url"]
-infraConfigAllowedAttributes = set(infraConfigMandatoryAttributes).union(set(['cluster_from_name_regex', 'role_from_name_regex']))
+infraConfigAllowedAttributes = set(infraConfigMandatoryAttributes).union(set(['cluster_from_name_regex', 'role_from_name_regex', 'jenkins_url']))
 
 envConfigMandatoryAttributes = ["kvm_script_path", "keys_location", "roles_path"]
 envConfigAllowedAttributes = set(envConfigMandatoryAttributes).union(set([]))
