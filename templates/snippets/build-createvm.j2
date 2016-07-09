@@ -1,9 +1,9 @@
 
-{{m.env.kvm_script_path}}/keygen.sh {{m.env.keys_location}}/build_key
-{{m.env.kvm_script_path}}/keygen.sh {{m.env.keys_location}}/host_key
+{{m.os.path.join(m.env_dir,m.env.kvm_script_path)}}/keygen.sh {{m.env.keys_location}}/build_key
+{{m.os.path.join(m.env_dir,m.env.kvm_script_path)}}/keygen.sh {{m.env.keys_location}}/host_key
 {% for node in m.cluster.nodes %}
 	
-{{m.env.kvm_script_path}}/createVM.sh --name {{node.vmname}} --vcpu {{node.features.vcpu}} --ram {{node.features.memory}} --host {{node.host}} --disk {{node.features.root_size}} \
+{{m.os.path.join(m.env_dir,m.env.kvm_script_path)}}/createVM.sh --name {{node.vmname}} --vcpu {{node.features.vcpu}} --ram {{node.features.memory}} --host {{node.host}} --disk {{node.features.root_size}} \
   --volume {{node.root_volume}} --hostname  {{node.hostname}} --buildkey {{m.env.keys_location}}/build_key --hostkey {{m.env.keys_location}}/host_key \
   --bridge {{node.network.bridge}} --ip {{node.ip}} --netmask {{node.network.netmask}} --gateway {{node.network.gateway}} --mac {{node.mac}} --dns {{node.network.dns[0]}} &
 	

@@ -40,7 +40,7 @@ if [ "$HOST" = "" ]; then echo "Missing --host parameters";	usage; exit 1; fi
 echo "Stopping the VM ${NAME}"
 
 ssh $SSH_OPTIONS $HOST "sudo virsh shutdown ${NAME}"
-wait_shutdown $HOST $NAME $NAME				 
+wait_shutdown $HOST $NAME "Waiting $NAME down\n"				 
 
 
 

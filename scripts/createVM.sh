@@ -143,9 +143,9 @@ ssh $SSH_OPTIONS $HOST "sudo fallocate -l ${DISK}G /${VOLUME}/libvirt/images/${N
 ssh $SSH_OPTIONS $HOST "sudo virt-install -n ${NAME} -r ${RAM} --vcpus=${VCPU}  --network bridge=${BRIDGE},model=virtio,mac=${MAC} --disk path=$DSK \
 		 --pxe --accelerate --vnc --os-type=linux --os-variant=rhel7 --noreboot"
 		 
-echo "Waiting for the VM to shutdown"
+echo "Waiting for the VM  $NAME to shutdown"
 
-wait_shutdown $HOST $NAME   
+wait_shutdown $HOST $NAME "Waiting $NAME down\n"		
 
 echo "Mark as autostart"
 ssh $SSH_OPTIONS $HOST "sudo virsh autostart ${NAME}"

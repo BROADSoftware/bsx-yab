@@ -8,7 +8,7 @@ export INFRA_DOMAIN={{m.infra.infra_domain}}
 
 echo "----------- Will stop cluster {{m.cluster.id}}"
 {% for node in m.cluster.nodes %}
-{{m.env.kvm_script_path}}/stopVM.sh --host {{node.host}} --name {{node.vmname}} &
+{{m.os.path.join(m.env_dir,m.env.kvm_script_path)}}/stopVM.sh --host {{node.host}} --name {{node.vmname}} &
 {% endfor %}
 
 echo "............ Wait for VM down"

@@ -5,6 +5,7 @@
 #
 
 export INFRA_DOMAIN={{m.infra.infra_domain}}
+export COBBLER_HOST={{m.infra.cobbler_host}}
 
 
 if [ "$1" == "{{m.cluster.id}}" ]
@@ -17,19 +18,19 @@ then
         echo "Lets go.."
         
 {% for node in m.cluster.nodes %}
-        {{m.env.kvm_script_path}}/deleteVM.sh --host {{node.host}} --name {{node.vmname}}
+        {{m.os.path.join(m.env_dir,m.env.kvm_script_path)}}/deleteVM.sh --host {{node.host}} --name {{node.vmname}}
 {% endfor %}
  
 {% for node in m.cluster.nodes %}
         echo "---- Will delete root disk of node {{node.name}}"
-        {{m.env.kvm_script_path}}/deleteDisk.sh --host {{node.host}} --name {{node.vmname}} --volume {{node.root_volume}} --device vda
+        {{m.os.path.join(m.env_dir,m.env.kvm_script_path)}}/deleteDisk.sh --host {{node.host}} --name {{node.vmname}} --volume {{node.root_volume}} --device vda
 {% endfor %}
 
 {% for node in m.cluster.nodes %}
 {% if node.features.data_disks is defined %}
         echo "---- Will delete Data disk(s) of node {{node.name}}"
 {% for disk in node.features.data_disks %}
-        {{m.env.kvm_script_path}}/deleteDisk.sh --host {{node.host}} --name {{node.vmname}} --volume {{disk.volume}} --device {{disk.device}}
+        {{m.os.path.join(m.env_dir,m.env.kvm_script_path)}}/deleteDisk.sh --host {{node.host}} --name {{node.vmname}} --volume {{disk.volume}} --device {{disk.device}}
 {% endfor %}
 {% else %}
         echo "---- No Data disk for node {{node.name}}"

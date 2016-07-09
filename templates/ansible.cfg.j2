@@ -1,5 +1,6 @@
 [defaults] 
-roles_path = {{m.env.roles_path}}
+roles_path = {% for rp in m.env.roles_path %}{% if not loop.first %}:{% endif %}{{m.os.path.join(m.env_dir,rp)}}{% endfor %}
+
 inventory = ./inventory
 host_key_checking = False
 

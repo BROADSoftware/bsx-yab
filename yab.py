@@ -94,7 +94,8 @@ def findYabConfig(fileName, initial, location, cpt):
     if os.path.isfile(x):
         # Found !
         print "Use '{0}' as config file".format(x)
-        return edict(yaml.load(open(x)))
+        return x
+        #return edict(yaml.load(open(x)))
     else:
         if location == "" or location == "/" :
             ERROR("Unable to locate a {0} file in '{1}' and upward".format(fileName, initial))
@@ -348,9 +349,11 @@ def main():
         ERROR("dnsmasq: '{0}' does not exists!".format(targetDnsmasqFile))
         
     sourceFileDir = os.path.dirname(os.path.realpath(sourceFile))
-    infraConfig = findYabConfig('yab-infra.yml', sourceFileDir, sourceFileDir, 0)
+    yab_infra_file = findYabConfig('yab-infra.yml', sourceFileDir, sourceFileDir, 0)
+    infraConfig = edict(yaml.load(open(yab_infra_file)))
     adjustInfraConfig(infraConfig)
-    envConfig = findYabConfig('yab-env.yml', sourceFileDir, sourceFileDir, 0)
+    yab_env_file = findYabConfig('yab-env.yml', sourceFileDir, sourceFileDir, 0)
+    envConfig = edict(yaml.load(open(yab_env_file)))
     adjustEnvConfig(envConfig)
         
     cluster = edict(yaml.load(open(sourceFile)))
@@ -377,6 +380,8 @@ def main():
     model.cluster = cluster
     model.infra = infraConfig
     model.env = envConfig
+    model.env_dir = os.path.dirname(yab_env_file)
+    model.os = os
     jinja2env = jinja2.Environment(loader = jinja2.FileSystemLoader(os.path.join(mydir, 'templates')), undefined = jinja2.StrictUndefined, trim_blocks = True)
     if targetBuildFolder:
         generate(jinja2env, model, "build.sh", targetBuildFolder, "build.sh")
